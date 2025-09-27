@@ -10,5 +10,5 @@ app.use(json());
 app.get('/', (req, res) => res.send('Prueba api node'))
 
 app.listen(8080, ()=>{
-console.log("Api funcionando en el puerto 8080")
+  console.log("Api funcionando en el puerto 8080")
 }) 
