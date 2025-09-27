@@ -1,12 +1,13 @@
 import { DataSource } from "typeorm";
 import dotenv from 'dotenv';
 import dns from "dns";
+import { Product } from "../models/products.js";
 
 dns.setDefaultResultOrder("ipv4first");
 dotenv.config();
 
 export const AppDataSource = new DataSource({
-  type: "postgres",
+  type: "mysql",
   host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT || "5432", 10),
   username: process.env.DB_USER,
@@ -15,9 +16,9 @@ export const AppDataSource = new DataSource({
   ssl: {
     rejectUnauthorized: false, 
   },
-  synchronize: false, 
+  synchronize: true, 
   logging: true,
-  entities: [],
+  entities: [Product],
   migrations: ["src/migrations/*.ts"],
   subscribers: [],
 });
