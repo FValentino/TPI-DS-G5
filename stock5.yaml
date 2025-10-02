@@ -1,0 +1,1735 @@
+openapi: 3.0.4
+info:
+  title: Stock de Bienes y Servicios API
+  description: API para la gestión de productos, inventario, reservas y reclamos del subsistema de Stock de Bienes y Servicios para un sistema de e-commerce universitario (UTN)
+  version: "1.0.0"
+  contact:
+    name: UTN - Desarrollo de Software
+    url: https://frre.utn.edu.ar
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://api.stock.example.edu/v1
+    description: Production server
+
+tags:
+  - name: Catalog
+    description: Gestión de productos y SKUs
+  - name: Inventory
+    description: Gestión de inventario y ubicaciones
+  - name: Reservations
+    description: Reservas de stock
+  - name: Claims
+    description: Reclamos de mercadería por Transporte
+  - name: Locations
+    description: Gestión de ubicaciones
+  - name: Adjustments
+    description: Ajustes de inventario
+
+security:
+  - OAuth2: []
+  - BearerAuth: []
+
+paths:
+  /products:
+    get:
+      tags:
+        - Catalog
+      summary: Obtener lista de productos
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/VendorIdParam'
+        - $ref: '#/components/parameters/ActiveParam'
+        - $ref: '#/components/parameters/UpdatedSinceParam'
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.read]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER, PORTAL]
+    post:
+      tags:
+        - Catalog
+      summary: Crear producto
+      requestBody:
+        $ref: '#/components/requestBodies/ProductCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.write]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER]
+
+  /products/{productId}:
+    get:
+      tags:
+        - Catalog
+      summary: Obtener producto por ID
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.read]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER, PORTAL]
+    patch:
+      tags:
+        - Catalog
+      summary: Actualizar producto
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        $ref: '#/components/requestBodies/ProductUpdate'
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.write]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER]
+    delete:
+      tags:
+        - Catalog
+      summary: Eliminar producto (soft delete)
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Producto eliminado
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.write]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER]
+
+  /skus:
+    get:
+      tags:
+        - Catalog
+      summary: Obtener lista de SKUs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ProductIdParam'
+        - $ref: '#/components/parameters/CodeParam'
+        - $ref: '#/components/parameters/BarcodeParam'
+        - $ref: '#/components/parameters/ActiveParam'
+      responses:
+        '200':
+          description: Lista de SKUs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SKU'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.read]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER, PORTAL]
+    post:
+      tags:
+        - Catalog
+      summary: Crear SKU
+      requestBody:
+        $ref: '#/components/requestBodies/SkuCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.write]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER]
+
+  /skus/{skuId}:
+    get:
+      tags:
+        - Catalog
+      summary: Obtener SKU por ID
+      parameters:
+        - name: skuId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: SKU encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SKU'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.read]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER, PORTAL]
+    patch:
+      tags:
+        - Catalog
+      summary: Actualizar SKU
+      parameters:
+        - name: skuId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        $ref: '#/components/requestBodies/SkuUpdate'
+      responses:
+        '200':
+          description: SKU actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SKU'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [catalog.write]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER]
+
+  /locations:
+    get:
+      tags:
+        - Locations
+      summary: Obtener ubicaciones
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de ubicaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [stock.read]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER, PORTAL, TRANSPORT]
+    post:
+      tags:
+        - Locations
+      summary: Crear ubicación
+      requestBody:
+        $ref: '#/components/requestBodies/LocationCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [stock.write]
+        - BearerAuth: []
+      x-roles: [ADMIN]
+
+  /inventory-levels:
+    get:
+      tags:
+        - Inventory
+      summary: Obtener niveles de inventario
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SkuIdParam'
+        - $ref: '#/components/parameters/LocationIdParam'
+      responses:
+        '200':
+          description: Lista de niveles de inventario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryLevel'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [stock.read]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER, PORTAL, TRANSPORT]
+
+  /inventory-levels/{locationId}/{skuId}:
+    patch:
+      tags:
+        - Inventory
+      summary: Actualizar nivel de inventario
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: skuId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        $ref: '#/components/requestBodies/InventoryLevelUpdate'
+      responses:
+        '200':
+          description: Nivel de inventario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryLevel'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [stock.write]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER]
+
+  /inventory/adjustments:
+    post:
+      tags:
+        - Adjustments
+      summary: Registrar ajuste de inventario
+      requestBody:
+        $ref: '#/components/requestBodies/AdjustmentCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [stock.write]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER]
+
+  /availability/quote:
+    post:
+      tags:
+        - Inventory
+      summary: Consultar disponibilidad de stock
+      requestBody:
+        $ref: '#/components/requestBodies/AvailabilityQuoteRequest'
+      responses:
+        '200':
+          description: Cotización de disponibilidad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityQuoteResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [stock.read]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER, PORTAL]
+
+  /reservations:
+    post:
+      tags:
+        - Reservations
+      summary: Crear reserva de stock
+      requestBody:
+        $ref: '#/components/requestBodies/ReservationCreate'
+      responses:
+        '201':
+          description: Reserva creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [reservation.write]
+      x-roles: [PORTAL]
+
+  /reservations/{reservationId}:
+    get:
+      tags:
+        - Reservations
+      summary: Obtener reserva por ID
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reserva encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [reservation.read]
+        - BearerAuth: []
+      x-roles: [ADMIN, SELLER, PORTAL, TRANSPORT]
+
+  /reservations/{reservationId}/confirm:
+    post:
+      tags:
+        - Reservations
+      summary: Confirmar reserva
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reserva confirmada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [reservation.write]
+      x-roles: [PORTAL]
+
+  /reservations/{reservationId}/release:
+    post:
+      tags:
+        - Reservations
+      summary: Liberar reserva
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Motivo de la liberación
+              example:
+                reason: "Liberación manual por administrador"
+      responses:
+        '200':
+          description: Reserva liberada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [reservation.write]
+        - BearerAuth: []
+      x-roles: [ADMIN, PORTAL]
+
+  /claims:
+    post:
+      tags:
+        - Claims
+      summary: Crear reclamo de mercadería
+      requestBody:
+        $ref: '#/components/requestBodies/ClaimCreate'
+      responses:
+        '201':
+          description: Reclamo creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [claim.write]
+      x-roles: [TRANSPORT]
+
+  /claims/{claimId}/fulfill:
+    post:
+      tags:
+        - Claims
+      summary: Cumplir reclamo
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reclamo cumplido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [claim.write]
+      x-roles: [TRANSPORT]
+
+  /claims/{claimId}/reject:
+    post:
+      tags:
+        - Claims
+      summary: Rechazar reclamo
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Motivo del rechazo
+              required:
+                - reason
+              example:
+                reason: "Cantidad solicitada no disponible"
+      responses:
+        '200':
+          description: Reclamo rechazado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - OAuth2: [claim.write]
+      x-roles: [TRANSPORT]
+
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      description: OAuth2 Client Credentials para integraciones servidor-servidor
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.edu/oauth2/token
+          scopes:
+            catalog.read: Lectura de catálogo de productos
+            catalog.write: Escritura de catálogo de productos
+            stock.read: Lectura de información de stock
+            stock.write: Escritura de información de stock
+            reservation.read: Lectura de reservas
+            reservation.write: Escritura de reservas
+            claim.write: Escritura de reclamos
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer JWT para usuarios vendedores y administradores
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Número de página
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Elementos por página
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+        example: 20
+    VendorIdParam:
+      name: vendorId
+      in: query
+      description: Filtrar por ID de vendedor
+      required: false
+      schema:
+        type: string
+        format: uuid
+    ActiveParam:
+      name: active
+      in: query
+      description: Filtrar por estado activo
+      required: false
+      schema:
+        type: boolean
+    UpdatedSinceParam:
+      name: updatedSince
+      in: query
+      description: Filtrar por última actualización
+      required: false
+      schema:
+        type: string
+        format: date-time
+        example: "2025-09-18T15:04:05Z"
+    SkuIdParam:
+      name: skuId
+      in: query
+      description: Filtrar por ID de SKU
+      required: false
+      schema:
+        type: string
+        format: uuid
+    LocationIdParam:
+      name: locationId
+      in: query
+      description: Filtrar por ID de ubicación
+      required: false
+      schema:
+        type: string
+        format: uuid
+    ProductIdParam:
+      name: productId
+      in: query
+      description: Filtrar por ID de producto
+      required: false
+      schema:
+        type: string
+        format: uuid
+    CodeParam:
+      name: code
+      in: query
+      description: Filtrar por código SKU
+      required: false
+      schema:
+        type: string
+    BarcodeParam:
+      name: barcode
+      in: query
+      description: Filtrar por código de barras
+      required: false
+      schema:
+        type: string
+
+  headers:
+    X-Correlation-Id:
+      description: ID de correlación para trazabilidad
+      schema:
+        type: string
+        format: uuid
+
+  requestBodies:
+    ProductCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - name
+              - category
+              - vendorId
+            properties:
+              name:
+                type: string
+                maxLength: 255
+              description:
+                type: string
+                maxLength: 2000
+              category:
+                type: string
+                maxLength: 100
+              brand:
+                type: string
+                maxLength: 100
+              images:
+                type: array
+                items:
+                  type: string
+                  format: uri
+              attributes:
+                type: object
+                additionalProperties: true
+              vendorId:
+                type: string
+                format: uuid
+            example:
+              name: "Notebook Gaming Pro"
+              description: "Notebook de alta gama para gaming"
+              category: "Electrónicos"
+              brand: "TechBrand"
+              vendorId: "550e8400-e29b-41d4-a716-446655440001"
+
+    ProductUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                maxLength: 255
+              description:
+                type: string
+                maxLength: 2000
+              category:
+                type: string
+                maxLength: 100
+              brand:
+                type: string
+                maxLength: 100
+              images:
+                type: array
+                items:
+                  type: string
+                  format: uri
+              attributes:
+                type: object
+                additionalProperties: true
+              active:
+                type: boolean
+
+    SkuCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - productId
+              - code
+            properties:
+              productId:
+                type: string
+                format: uuid
+              code:
+                type: string
+                maxLength: 50
+              barcode:
+                type: string
+                maxLength: 50
+              attributes:
+                type: object
+                additionalProperties: true
+              dimensions:
+                $ref: '#/components/schemas/Dimensions'
+              packageUnits:
+                type: integer
+                minimum: 1
+            example:
+              productId: "550e8400-e29b-41d4-a716-446655440000"
+              code: "SKU-NOTEBOOK-001"
+              barcode: "1234567890123"
+
+    SkuUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: string
+                maxLength: 50
+              barcode:
+                type: string
+                maxLength: 50
+              attributes:
+                type: object
+                additionalProperties: true
+              dimensions:
+                $ref: '#/components/schemas/Dimensions'
+              packageUnits:
+                type: integer
+                minimum: 1
+              active:
+                type: boolean
+
+    LocationCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - name
+              - type
+            properties:
+              name:
+                type: string
+                maxLength: 255
+              type:
+                type: string
+                enum: [WAREHOUSE, STORE, DROPSHIP]
+              address:
+                $ref: '#/components/schemas/Address'
+              geo:
+                $ref: '#/components/schemas/GeoLocation'
+
+    InventoryLevelUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              adjustment:
+                $ref: '#/components/schemas/AdjustmentInput'
+
+    AdjustmentCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AdjustmentInput'
+
+    AvailabilityQuoteRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvailabilityQuoteRequest'
+
+    ReservationCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - orderId
+              - channel
+              - ttlSeconds
+              - items
+            properties:
+              orderId:
+                type: string
+                maxLength: 100
+              channel:
+                type: string
+                enum: [PORTAL]
+              ttlSeconds:
+                type: integer
+                minimum: 60
+                maximum: 86400
+              items:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - skuId
+                    - quantity
+                  properties:
+                    skuId:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: integer
+                      minimum: 1
+                    locationId:
+                      type: string
+                      format: uuid
+              notes:
+                type: string
+                maxLength: 500
+            example:
+              orderId: "ORDER-123456"
+              channel: "PORTAL"
+              ttlSeconds: 1800
+              items:
+                - skuId: "550e8400-e29b-41d4-a716-446655440002"
+                  quantity: 2
+
+    ClaimCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - reservationId
+              - items
+            properties:
+              reservationId:
+                type: string
+                format: uuid
+              items:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - skuId
+                    - quantity
+                    - locationId
+                  properties:
+                    skuId:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: integer
+                      minimum: 1
+                    locationId:
+                      type: string
+                      format: uuid
+            example:
+              reservationId: "550e8400-e29b-41d4-a716-446655440006"
+              items:
+                - skuId: "550e8400-e29b-41d4-a716-446655440002"
+                  quantity: 2
+                  locationId: "550e8400-e29b-41d4-a716-446655440003"
+
+  responses:
+    Created:
+      description: Recurso creado exitosamente
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              message:
+                type: string
+
+    Error400:
+      description: Solicitud inválida
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://api.stock.example.edu/problems/bad-request"
+            title: "Solicitud inválida"
+            status: 400
+            detail: "Los datos enviados no son válidos"
+
+    Error404:
+      description: Recurso no encontrado
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://api.stock.example.edu/problems/not-found"
+            title: "Recurso no encontrado"
+            status: 404
+            detail: "El recurso solicitado no existe"
+
+    Error409:
+      description: Conflicto
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://api.stock.example.edu/problems/insufficient-stock"
+            title: "Stock insuficiente"
+            status: 409
+            detail: "No hay suficiente stock disponible"
+
+    Error422:
+      description: Entidad no procesable
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://api.stock.example.edu/problems/validation-error"
+            title: "Error de validación"
+            status: 422
+            detail: "Los datos no cumplen las reglas de negocio"
+
+    Error500:
+      description: Error interno del servidor
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://api.stock.example.edu/problems/internal-error"
+            title: "Error interno"
+            status: 500
+            detail: "Ocurrió un error interno del servidor"
+
+  schemas:
+    Product:
+      type: object
+      required:
+        - productId
+        - name
+        - category
+        - active
+        - vendorId
+        - createdAt
+        - updatedAt
+      properties:
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        category:
+          type: string
+          maxLength: 100
+        brand:
+          type: string
+          maxLength: 100
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        attributes:
+          type: object
+          additionalProperties: true
+        active:
+          type: boolean
+        vendorId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        productId: "550e8400-e29b-41d4-a716-446655440000"
+        name: "Notebook Gaming Pro"
+        description: "Notebook de alta gama para gaming"
+        category: "Electrónicos"
+        brand: "TechBrand"
+        images:
+          - "https://example.com/images/notebook1.jpg"
+        attributes:
+          color: "Negro"
+          warranty: "2 años"
+        active: true
+        vendorId: "550e8400-e29b-41d4-a716-446655440001"
+        createdAt: "2025-09-18T15:04:05Z"
+        updatedAt: "2025-09-18T15:04:05Z"
+
+    SKU:
+      type: object
+      required:
+        - skuId
+        - productId
+        - code
+        - active
+        - createdAt
+        - updatedAt
+      properties:
+        skuId:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 50
+        barcode:
+          type: string
+          maxLength: 50
+        attributes:
+          type: object
+          additionalProperties: true
+        dimensions:
+          $ref: '#/components/schemas/Dimensions'
+        packageUnits:
+          type: integer
+          minimum: 1
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        skuId: "550e8400-e29b-41d4-a716-446655440002"
+        productId: "550e8400-e29b-41d4-a716-446655440000"
+        code: "SKU-NOTEBOOK-001"
+        barcode: "1234567890123"
+        attributes:
+          ram: "16GB"
+          storage: "1TB SSD"
+        dimensions:
+          weightKg: 2.5
+          heightCm: 2.0
+          widthCm: 35.5
+          lengthCm: 24.5
+        packageUnits: 1
+        active: true
+        createdAt: "2025-09-18T15:04:05Z"
+        updatedAt: "2025-09-18T15:04:05Z"
+
+    Location:
+      type: object
+      required:
+        - locationId
+        - name
+        - type
+      properties:
+        locationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+          enum: [WAREHOUSE, STORE, DROPSHIP]
+        address:
+          $ref: '#/components/schemas/Address'
+        geo:
+          $ref: '#/components/schemas/GeoLocation'
+      example:
+        locationId: "550e8400-e29b-41d4-a716-446655440003"
+        name: "Depósito Central Buenos Aires"
+        type: "WAREHOUSE"
+        address:
+          country: "AR"
+          province: "Buenos Aires"
+          city: "La Plata"
+          postalCode: "1900"
+          line1: "Av. Libertad 1234"
+        geo:
+          lat: -34.9215
+          lng: -57.9545
+
+    InventoryLevel:
+      type: object
+      required:
+        - skuId
+        - locationId
+        - onHand
+        - reserved
+        - available
+        - updatedAt
+      properties:
+        skuId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        onHand:
+          type: integer
+          minimum: 0
+        reserved:
+          type: integer
+          minimum: 0
+        available:
+          type: integer
+          minimum: 0
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        skuId: "550e8400-e29b-41d4-a716-446655440002"
+        locationId: "550e8400-e29b-41d4-a716-446655440003"
+        onHand: 100
+        reserved: 15
+        available: 85
+        updatedAt: "2025-09-18T15:04:05Z"
+
+    Adjustment:
+      type: object
+      required:
+        - adjustmentId
+        - skuId
+        - locationId
+        - type
+        - quantity
+        - reason
+        - createdAt
+        - createdBy
+      properties:
+        adjustmentId:
+          type: string
+          format: uuid
+        skuId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [INCREASE, DECREASE, CORRECTION]
+        quantity:
+          type: integer
+          minimum: 0
+        reason:
+          type: string
+          maxLength: 500
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+      example:
+        adjustmentId: "550e8400-e29b-41d4-a716-446655440004"
+        skuId: "550e8400-e29b-41d4-a716-446655440002"
+        locationId: "550e8400-e29b-41d4-a716-446655440003"
+        type: "INCREASE"
+        quantity: 50
+        reason: "Reposición de inventario"
+        createdAt: "2025-09-18T15:04:05Z"
+        createdBy: "550e8400-e29b-41d4-a716-446655440005"
+
+    AdjustmentInput:
+      type: object
+      required:
+        - skuId
+        - locationId
+        - type
+        - quantity
+        - reason
+      properties:
+        skuId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [INCREASE, DECREASE, CORRECTION]
+        quantity:
+          type: integer
+          minimum: 0
+        reason:
+          type: string
+          maxLength: 500
+      example:
+        skuId: "550e8400-e29b-41d4-a716-446655440002"
+        locationId: "550e8400-e29b-41d4-a716-446655440003"
+        type: "INCREASE"
+        quantity: 50
+        reason: "Reposición de inventario"
+
+    Reservation:
+      type: object
+      required:
+        - reservationId
+        - channel
+        - orderId
+        - items
+        - status
+        - ttlSeconds
+        - expiresAt
+        - createdAt
+        - updatedAt
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+        channel:
+          type: string
+          enum: [PORTAL]
+        orderId:
+          type: string
+          maxLength: 100
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationItem'
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, RELEASED, EXPIRED]
+        ttlSeconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+        expiresAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          maxLength: 500
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        reservationId: "550e8400-e29b-41d4-a716-446655440006"
+        channel: "PORTAL"
+        orderId: "ORDER-123456"
+        items:
+          - skuId: "550e8400-e29b-41d4-a716-446655440002"
+            quantity: 2
+            locationId: "550e8400-e29b-41d4-a716-446655440003"
+            quantityReserved: 2
+        status: "CONFIRMED"
+        ttlSeconds: 1800
+        expiresAt: "2025-09-18T15:34:05Z"
+        createdAt: "2025-09-18T15:04:05Z"
+        updatedAt: "2025-09-18T15:04:05Z"
+
+    ReservationItem:
+      type: object
+      required:
+        - skuId
+        - quantity
+      properties:
+        skuId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        locationId:
+          type: string
+          format: uuid
+        quantityReserved:
+          type: integer
+          minimum: 0
+      example:
+        skuId: "550e8400-e29b-41d4-a716-446655440002"
+        quantity: 2
+        locationId: "550e8400-e29b-41d4-a716-446655440003"
+        quantityReserved: 2
+
+    Claim:
+      type: object
+      required:
+        - claimId
+        - reservationId
+        - requestedAt
+        - items
+        - status
+      properties:
+        claimId:
+          type: string
+          format: uuid
+        reservationId:
+          type: string
+          format: uuid
+        requestedAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClaimItem'
+        status:
+          type: string
+          enum: [REQUESTED, FULFILLED, REJECTED]
+        pickList:
+          type: array
+          items:
+            $ref: '#/components/schemas/PickListItem'
+      example:
+        claimId: "550e8400-e29b-41d4-a716-446655440007"
+        reservationId: "550e8400-e29b-41d4-a716-446655440006"
+        requestedAt: "2025-09-18T15:10:05Z"
+        items:
+          - skuId: "550e8400-e29b-41d4-a716-446655440002"
+            quantity: 2
+            locationId: "550e8400-e29b-41d4-a716-446655440003"
+        status: "REQUESTED"
+        pickList:
+          - skuId: "550e8400-e29b-41d4-a716-446655440002"
+            locationId: "550e8400-e29b-41d4-a716-446655440003"
+            bin: "A-01-15"
+            quantityToPick: 2
+
+    ClaimItem:
+      type: object
+      required:
+        - skuId
+        - quantity
+        - locationId
+      properties:
+        skuId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        locationId:
+          type: string
+          format: uuid
+      example:
+        skuId: "550e8400-e29b-41d4-a716-446655440002"
+        quantity: 2
+        locationId: "550e8400-e29b-41d4-a716-446655440003"
+
+    PickListItem:
+      type: object
+      required:
+        - skuId
+        - locationId
+        - quantityToPick
+      properties:
+        skuId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        bin:
+          type: string
+          maxLength: 50
+        quantityToPick:
+          type: integer
+          minimum: 1
+      example:
+        skuId: "550e8400-e29b-41d4-a716-446655440002"
+        locationId: "550e8400-e29b-41d4-a716-446655440003"
+        bin: "A-01-15"
+        quantityToPick: 2
+
+    AvailabilityQuoteRequest:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - skuId
+              - quantity
+            properties:
+              skuId:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+                minimum: 1
+              preferredLocationId:
+                type: string
+                format: uuid
+      example:
+        items:
+          - skuId: "550e8400-e29b-41d4-a716-446655440002"
+            quantity: 5
+            preferredLocationId: "550e8400-e29b-41d4-a716-446655440003"
+
+    AvailabilityQuoteResponse:
+      type: object
+      required:
+        - available
+        - items
+      properties:
+        available:
+          type: boolean
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - skuId
+              - requestedQuantity
+              - availableQuantity
+              - locations
+            properties:
+              skuId:
+                type: string
+                format: uuid
+              requestedQuantity:
+                type: integer
+                minimum: 1
+              availableQuantity:
+                type: integer
+                minimum: 0
+              locations:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - locationId
+                    - availableQuantity
+                  properties:
+                    locationId:
+                      type: string
+                      format: uuid
+                    availableQuantity:
+                      type: integer
+                      minimum: 0
+      example:
+        available: true
+        items:
+          - skuId: "550e8400-e29b-41d4-a716-446655440002"
+            requestedQuantity: 5
+            availableQuantity: 85
+            locations:
+              - locationId: "550e8400-e29b-41d4-a716-446655440003"
+                availableQuantity: 85
+
+    Dimensions:
+      type: object
+      properties:
+        weightKg:
+          type: number
+          minimum: 0
+        heightCm:
+          type: number
+          minimum: 0
+        widthCm:
+          type: number
+          minimum: 0
+        lengthCm:
+          type: number
+          minimum: 0
+      example:
+        weightKg: 2.5
+        heightCm: 2.0
+        widthCm: 35.5
+        lengthCm: 24.5
+
+    Address:
+      type: object
+      properties:
+        country:
+          type: string
+          maxLength: 2
+        province:
+          type: string
+          maxLength: 100
+        city:
+          type: string
+          maxLength: 100
+        postalCode:
+          type: string
+          maxLength: 20
+        line1:
+          type: string
+          maxLength: 255
+        line2:
+          type: string
+          maxLength: 255
+      example:
+        country: "AR"
+        province: "Buenos Aires"
+        city: "La Plata"
+        postalCode: "1900"
+        line1: "Av. Libertad 1234"
+
+    GeoLocation:
+      type: object
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+      example:
+        lat: -34.9215
+        lng: -57.9545
+
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+      example:
+        type: "https://api.stock.example.edu/problems/insufficient-stock"
+        title: "Stock insuficiente"
+        status: 409
+        detail: "No hay suficiente stock disponible para el SKU solicitado"
+        instance: "/reservations/550e8400-e29b-41d4-a716-446655440006"
+
