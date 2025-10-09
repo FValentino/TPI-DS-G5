@@ -1,5 +1,5 @@
 import { productsData } from "../data/productData.js";
-import { Product } from "../models/products.js";
+import type { Product, ProductInput, ProductUpdate } from "../types/product.js";
 
 export class ProductService {
   private products = productsData;
@@ -35,10 +35,10 @@ export class ProductService {
       );
     }
 
-    // Filtrar por categoría (busca en el array de categories)
+    // Filtrar por categoría
     if (categoryId) {
       filteredProducts = filteredProducts.filter(
-        (product) => product.categories.includes(categoryId)
+        (product) => product.categories?.some(cat => cat.id === categoryId)
       );
     }
 
@@ -60,9 +60,9 @@ export class ProductService {
 
   // ===== MÉTODOS DE CREACIÓN =====
 
-  createProduct(productData: Omit<Product, 'id'>): Product {
+  createProduct(productData: ProductInput): { id: number; mensaje: string } {
     // Validar datos
-    this.validateProductData(productData);
+    this.validateProductInput(productData);
 
     // Verificar que no exista un producto con el mismo nombre
     const existingProduct = this.products.find(
@@ -74,56 +74,60 @@ export class ProductService {
     }
 
     // Crear el producto
-    const newProduct = new Product(
-      this.nextId++,
-      productData.name,
-      productData.description,
-      productData.price,
-      productData.stock || 0,
-      productData.peso,
-      productData.images || [],
-      productData.categories || []
-    );
+    const newProduct: Product = {
+      id: this.nextId++,
+      nombre: productData.nombre,
+      descripcion: productData.descripcion,
+      precio: productData.precio,
+      stockDisponible: productData.stockInicial,
+      pesoKg: productData.pesoKg,
+      imagenes: productData.imagenes || [],
+      categorias: productData.categoriaIds?.map(id => ({ id, nombre: '', descripcion: '' })) // Simular categorías
+    };
 
     this.products.push(newProduct);
-    return newProduct;
+    
+    return {
+      id: newProduct.id,
+      mensaje: 'Producto creado exitosamente.'
+    };
   }
 
   // ===== MÉTODOS DE ACTUALIZACIÓN =====
 
-  updateProduct(id: number, updates: Partial<Product>): Product | null {
-  const productIndex = this.products.findIndex(p => p.id === id);
+  updateProduct(id: number, updates: ProductUpdate): Product | null {
+    const productIndex = this.products.findIndex(p => p.id === id);
 
-  if (productIndex === -1) {
-    return null;
-  }
-
-  // Validar que no se actualice el ID
-  if (updates.id && updates.id !== id) {
-    throw new Error('No se puede modificar el ID del producto');
-  }
-
-  // Validar datos de actualización
-  this.validateProductData(updates);
-
-  // Si se actualiza el nombre, verificar que no exista otro con el mismo
-  if (updates.name) {
-    const existingProduct = this.products.find(
-      p => p.id !== id && p.name.toLowerCase() === updates.name!.toLowerCase()
-    );
-
-    if (existingProduct) {
-      throw new Error('Ya existe otro producto con ese nombre');
+    if (productIndex === -1) {
+      return null;
     }
+
+    // Si se actualiza el nombre, verificar que no exista otro con el mismo
+    if (updates.nombre) {
+      const existingProduct = this.products.find(
+        p => p.id !== id && p.nombre.toLowerCase() === updates.nombre!.toLowerCase()
+      );
+
+      if (existingProduct) {
+        throw new Error('Ya existe otro producto con ese nombre');
+      }
+    }
+
+    // Actualizar propiedades del producto existente
+    const product = this.products[productIndex];
+    
+    if (updates.nombre !== undefined) product?.name = updates.nombre;
+    if (updates.descripcion !== undefined) product?.description = updates.descripcion;
+    if (updates.precio !== undefined) product?.price = updates.precio;
+    if (updates.stockInicial !== undefined) product?.stockAvailable = updates.stockInicial;
+    if (updates.pesoKg !== undefined) product?.weightKg = updates.pesoKg;
+    if (updates.imagenes !== undefined) product?.images = updates.imagenes;
+    if (updates.categoriaIds !== undefined) {
+      product?.categories = updates.categoriaIds.map(id => ({ id, name: '', description: '' }));
+    }
+
+    return product;
   }
-
-  // Actualizar propiedades del producto existente
-  const product = this.products[productIndex];
-  
-  Object.assign(product, updates, { id }); // id siempre se mantiene
-
-  return product;
-}
 
   // ===== MÉTODOS DE ELIMINACIÓN =====
 
@@ -134,7 +138,6 @@ export class ProductService {
       return false;
     }
 
-    // Eliminar el producto del array
     this.products.splice(productIndex, 1);
     return true;
   }
@@ -148,7 +151,7 @@ export class ProductService {
       throw new Error('Producto no encontrado');
     }
 
-    return product.stock >= quantity;
+    return product.stockDisponible >= quantity;
   }
 
   reserveStock(productId: number, quantity: number): boolean {
@@ -158,11 +161,11 @@ export class ProductService {
       throw new Error('Producto no encontrado');
     }
 
-    if (product.stock < quantity) {
+    if (product.stockDisponible < quantity) {
       throw new Error('Stock insuficiente');
     }
 
-    product.stock -= quantity;
+    product.stockDisponible -= quantity;
     return true;
   }
 
@@ -173,90 +176,44 @@ export class ProductService {
       throw new Error('Producto no encontrado');
     }
 
-    product.stock += quantity;
+    product.stockDisponible += quantity;
     return true;
   }
 
   getLowStockProducts(threshold: number = 10): Product[] {
-    return this.products.filter(product => product.stock <= threshold);
+    return this.products.filter(product => product.stockDisponible <= threshold);
   }
 
   // ===== MÉTODOS DE CATEGORÍA =====
 
   getProductsByCategory(categoryId: number): Product[] {
-    return this.products.filter(product => product.categories.includes(categoryId));
-  }
-
-  // Agregar categoría a un producto
-  addCategoryToProduct(productId: number, categoryId: number): Product | null {
-    const product = this.findProductById(productId);
-
-    if (!product) {
-      return null;
-    }
-
-    if (!product.categories.includes(categoryId)) {
-      product.categories.push(categoryId);
-    }
-
-    return product;
-  }
-
-  // Remover categoría de un producto
-  removeCategoryFromProduct(productId: number, categoryId: number): Product | null {
-    const product = this.findProductById(productId);
-
-    if (!product) {
-      return null;
-    }
-
-    const index = product.categories.indexOf(categoryId);
-    if (index > -1) {
-      product.categories.splice(index, 1);
-    }
-
-    return product;
+    return this.products.filter(product => 
+      product.categorias?.some(cat => cat.id === categoryId)
+    );
   }
 
   // ===== MÉTODOS DE VALIDACIÓN =====
 
-  private validateProductData(data: Partial<Product>): void {
-    if (data.name !== undefined) {
-      if (!data.name || data.name.trim().length === 0) {
-        throw new Error('El nombre del producto es requerido');
-      }
-      if (data.name.length > 100) {
-        throw new Error('El nombre del producto no puede exceder 100 caracteres');
-      }
+  private validateProductInput(data: ProductInput): void {
+    if (!data.nombre || data.nombre.trim().length === 0) {
+      throw new Error('El nombre del producto es requerido');
     }
-
-    if (data.price !== undefined) {
-      if (data.price < 0) {
-        throw new Error('El precio no puede ser negativo');
-      }
+    if (data.nombre.length > 200) {
+      throw new Error('El nombre del producto no puede exceder 200 caracteres');
     }
-
-    if (data.stock !== undefined) {
-      if (data.stock < 0) {
-        throw new Error('El stock no puede ser negativo');
-      }
+    if (data.precio < 0) {
+      throw new Error('El precio no puede ser negativo');
     }
-
-    if (data.peso !== undefined) {
-      if (data.peso < 0) {
-        throw new Error('El peso no puede ser negativo');
-      }
+    if (data.stockInicial < 0) {
+      throw new Error('El stock no puede ser negativo');
     }
-
-    if (data.categories !== undefined) {
-      if (!Array.isArray(data.categories)) {
-        throw new Error('Las categorías deben ser un array');
-      }
+    if (data.pesoKg !== undefined && data.pesoKg < 0) {
+      throw new Error('El peso no puede ser negativo');
     }
-
-    if (data.images !== undefined) {
-      if (!Array.isArray(data.images)) {
-        throw new Error('Las imágenes deben ser un array');
+    if (data.imagenes && data.imagenes.length > 0) {
+      const principalCount = data.imagenes.filter(img => img.esPrincipal).length;
+      if (principalCount > 1) {
+        throw new Error('Solo una imagen puede ser marcada como principal');
       }
     }
   }
@@ -270,9 +227,9 @@ export class ProductService {
     lowStockCount: number;
     averageWeight: number;
   } {
-    const totalStock = this.products.reduce((sum, p) => sum + p.stock, 0);
+    const totalStock = this.products.reduce((sum, p) => sum + p.stockAvailable, 0);
     const totalPrice = this.products.reduce((sum, p) => sum + p.price, 0);
-    const totalWeight = this.products.reduce((sum, p) => sum + p.peso, 0);
+    const totalWeight = this.products.reduce((sum, p) => sum + (p.weightKg || 0), 0);
     const averagePrice = this.products.length > 0 ? totalPrice / this.products.length : 0;
     const averageWeight = this.products.length > 0 ? totalWeight / this.products.length : 0;
     const lowStockCount = this.getLowStockProducts().length;
@@ -291,8 +248,8 @@ export class ProductService {
   searchProducts(query: string): Product[] {
     const queryLower = query.toLowerCase();
     return this.products.filter(product => 
-      product.name.toLowerCase().includes(queryLower) ||
-      product.description?.toLowerCase().includes(queryLower)
+      product.nombre.toLowerCase().includes(queryLower) ||
+      product.descripcion?.toLowerCase().includes(queryLower)
     );
   }
 
@@ -314,15 +271,15 @@ export class ProductService {
     }
 
     if (filters.categoryId !== undefined) {
-      filtered = filtered.filter(p => p.categories.includes(filters.categoryId!));
+      filtered = filtered.filter(p => p.categories?.some(cat => cat.id === filters.categoryId));
     }
 
     if (filters.inStock !== undefined && filters.inStock) {
-      filtered = filtered.filter(p => p.stock > 0);
+      filtered = filtered.filter(p => p.stockAvailable > 0);
     }
 
     if (filters.maxWeight !== undefined) {
-      filtered = filtered.filter(p => p.peso <= filters.maxWeight!);
+      filtered = filtered.filter(p => (p.weightKg || 0) <= filters.maxWeight!);
     }
 
     return filtered;

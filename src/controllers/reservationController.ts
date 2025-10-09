@@ -9,9 +9,9 @@ export class ReservationController {
   }
 
   // POST /stock/reservar
-  createReservation = (req: Request, res: Response): void => {
+  createReservation = async (req: Request, res: Response): Promise<void> => {
     try {
-      const reservation = this.reservationService.createReservation(req.body);
+      const reservation = await this.reservationService.createReservation(req.body);
       res.status(201).json(reservation);
     } catch (error) {
       res.status(400).json({ 
@@ -21,9 +21,9 @@ export class ReservationController {
   };
 
   // POST /stock/liberar
-  releaseReservation = (req: Request, res: Response): void => {
+  releaseReservation = async (req: Request, res: Response): Promise<void> => {
     try {
-      this.reservationService.releaseReservation(req.body);
+      await this.reservationService.releaseReservation(req.body);
       res.status(200).json({ message: 'Stock liberado correctamente' });
     } catch (error) {
       res.status(400).json({ 
@@ -33,17 +33,18 @@ export class ReservationController {
   };
 
   // GET /reservas?userId=X&status=Y
-  getUserReservations = (req: Request, res: Response): void => {
+  getUserReservations = async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = parseInt(req.query.userId as string);
       const status = req.query.status as string | undefined;
 
-      if (!userId) {
-        res.status(400).json({ error: 'userId es requerido' });
+      // Validar que userId sea un número válido
+      if (!req.query.userId || isNaN(userId)) {
+        res.status(400).json({ error: 'userId es requerido y debe ser un número válido' });
         return;
       }
 
-      const reservations = this.reservationService.getUserReservations(userId, status);
+      const reservations = await this.reservationService.getUserReservations(userId, status);
       res.status(200).json(reservations);
     } catch (error) {
       res.status(400).json({ 
@@ -53,17 +54,23 @@ export class ReservationController {
   };
 
   // GET /reservas/:idReserva?userId=X
-  getReservationById = (req: Request, res: Response): void => {
+  getReservationById = async (req: Request, res: Response): Promise<void> => {
     try {
       const reservationId = parseInt(req.params.idReserva);
       const userId = parseInt(req.query.userId as string);
 
-      if (!userId) {
-        res.status(400).json({ error: 'userId es requerido' });
+      // Validar que ambos IDs sean números válidos
+      if (isNaN(reservationId)) {
+        res.status(400).json({ error: 'idReserva debe ser un número válido' });
         return;
       }
 
-      const reservation = this.reservationService.getReservationById(reservationId, userId);
+      if (!req.query.userId || isNaN(userId)) {
+        res.status(400).json({ error: 'userId es requerido y debe ser un número válido' });
+        return;
+      }
+
+      const reservation = await this.reservationService.getReservationById(reservationId, userId);
 
       if (!reservation) {
         res.status(404).json({ error: 'Reserva no encontrada' });
@@ -79,19 +86,31 @@ export class ReservationController {
   };
 
   // PATCH /reservas/:idReserva
-  updateReservationStatus = (req: Request, res: Response): void => {
+  updateReservationStatus = async (req: Request, res: Response): Promise<void> => {
     try {
       const reservationId = parseInt(req.params.idReserva);
       const { userId, status } = req.body;
 
-      if (!userId || !status) {
-        res.status(400).json({ error: 'userId y status son requeridos' });
+      // Validar que reservationId sea válido
+      if (isNaN(reservationId)) {
+        res.status(400).json({ error: 'idReserva debe ser un número válido' });
         return;
       }
 
-      const reservation = this.reservationService.updateReservationStatus(
+      // Validar que userId sea un número válido
+      if (!userId || isNaN(parseInt(userId))) {
+        res.status(400).json({ error: 'userId debe ser un número válido' });
+        return;
+      }
+
+      if (!status) {
+        res.status(400).json({ error: 'status es requerido' });
+        return;
+      }
+
+      const reservation = await this.reservationService.updateReservationStatus(
         reservationId, 
-        userId, 
+        parseInt(userId), 
         status
       );
 
