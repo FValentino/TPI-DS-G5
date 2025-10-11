@@ -1,24 +1,13 @@
-import { DataSource } from "typeorm";
-import dotenv from 'dotenv';
-import dns from "dns";
-import { Product } from "../models/products.js";
+//Cambio de MYSLQ --> SQLlite
 
-dns.setDefaultResultOrder("ipv4first");
-dotenv.config();
+import { DataSource } from "typeorm";
+import { Product } from "../core/entities/Product.js";
+import { Category } from "../core/entities/Category.js";
 
 export const AppDataSource = new DataSource({
-  type: "mysql",
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || "5432", 10),
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false, 
-  },
-  synchronize: true, 
+  type: "sqlite",
+  database: "tpi-ds-g5.sqlite",
+  entities: [Product, Category],
+  synchronize: true,
   logging: true,
-  entities: [Product],
-  migrations: ["src/migrations/*.ts"],
-  subscribers: [],
 });
